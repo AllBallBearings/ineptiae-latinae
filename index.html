@@ -22,7 +22,8 @@ const mk=document.createElement('canvas'), mctx=mk.getContext('2d');
 const fx=document.createElement('canvas'), fctx=fx.getContext('2d');
 const px=document.createElement('canvas'), pctx=px.getContext('2d',{willReadFrequently:true});
 const ARM_MS=6000; let armedUntil=0, speechOK=false, heard='', lastMsg='';
-const EFFECTS=['Black hole','Googly eyes','Clones','Pixelate','Ice block'];
+const tA=document.createElement('canvas'), tB=document.createElement('canvas');
+const EFFECTS=['Portal','Black hole','Googly eyes','Clones','Pixelate','Ice block'];
 let effect=0, active=false, t0=0, segmenter, busy=false, box=null, key={x:.5,y:.5}, frame=0;
 EFFECTS.forEach((n,i)=>{const b=document.createElement('button');b.textContent=n;
  b.onclick=()=>{effect=i;active=false;[...$('fx').children].forEach((x,j)=>x.classList.toggle('on',j==i))};$('fx').append(b)});
@@ -106,11 +107,35 @@ function loop(now){
 
 function draw(b,t,s){
  const R=Math.max(b.w,b.h)*0.6+10;
- if(effect==0) blackHole(b,R*t,s);
- else if(effect==1) googly(b,s);
- else if(effect==2) clones(b,t,s);
- else if(effect==3) pixelate(b);
+ if(effect==0) portal(b,t,s);
+ else if(effect==1) blackHole(b,R*t,s);
+ else if(effect==2) googly(b,s);
+ else if(effect==3) clones(b,t,s);
+ else if(effect==4) pixelate(b);
  else ice(b,t);
+}
+
+// object-shaped silhouette in a flat colour, at mask resolution
+function tint(cv,col){ cv.width=mk.width; cv.height=mk.height; const x=cv.getContext('2d');
+ x.drawImage(mk,0,0); x.globalCompositeOperation='source-in'; x.fillStyle=col; x.fillRect(0,0,cv.width,cv.height); return cv; }
+
+// Portal: the object's centre is pinched and pulled away into an endless tunnel.
+// Nested copies of the object shrink toward its centre, each darker and more twisted,
+// and all drift inward forever (layer k becomes layer k+1 as the phase wraps).
+function portal(b,t,s){
+ const o=cutout(), dark=tint(tA,'#05000f'), glow=tint(tB,'#b06cff');
+ const e=1-Math.pow(1-t,3), N=12, r=.8, ph=(s*.6)%1;
+ for(let k=0;k<=N;k++){ const d=k+ph, sc=1+(Math.pow(r,d)-1)*e, rot=d*.1*e*(1+.4*Math.sin(s*1.3));
+  ctx.save(); ctx.translate(b.cx,b.cy); ctx.rotate(rot); ctx.scale(sc,sc);
+  ctx.save(); ctx.scale(1.035,1.035); ctx.translate(-b.cx,-b.cy); ctx.globalAlpha=.9*e*Math.min(1,d); ctx.drawImage(glow,0,0,c.width,c.height); ctx.restore();
+  ctx.translate(-b.cx,-b.cy); ctx.drawImage(o,0,0);
+  ctx.globalAlpha=Math.min(.97,(1-Math.pow(.8,d))*e*1.1); ctx.drawImage(dark,0,0,c.width,c.height);
+  ctx.restore(); }
+ // light from the other side at the vanishing point
+ const R=Math.max(b.w,b.h)*.14*e*(1+.15*Math.sin(s*5)); if(R<1) return;
+ const g=ctx.createRadialGradient(b.cx,b.cy,0,b.cx,b.cy,R);
+ g.addColorStop(0,'rgba(255,255,255,.95)'); g.addColorStop(.3,'rgba(190,130,255,.7)'); g.addColorStop(1,'rgba(90,40,255,0)');
+ ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.cx,b.cy,R,0,7); ctx.fill(); ctx.restore();
 }
 
 function blackHole(b,R,s){
