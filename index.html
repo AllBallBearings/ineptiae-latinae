@@ -134,9 +134,9 @@ function googly(b,s){
 
 function clones(b,t,s){
  const o=cutout();
- for(let i=0;i<5;i++){ const a=i*1.256+s*.5, d=t*(80+i*25), sc=.5+.1*i;
-  ctx.save(); ctx.translate(b.cx+Math.cos(a)*d,b.cy+Math.sin(a)*d*.6); ctx.scale(sc,sc); ctx.translate(-b.cx,-b.cy);
-  ctx.drawImage(o,0,0); ctx.restore(); }
+ // same-size copies slide straight out to the left and right, two per side, outermost drawn first
+ const step=(b.w+Math.max(12,b.w*.12))*t;
+ for(const k of [-2,2,-1,1]) ctx.drawImage(o,k*step,0);
 }
 
 function pixelate(b){
